@@ -30,13 +30,12 @@ impl Shrimple for Command {
         self.spawn()
     }
     fn shrimp_vec(&mut self) -> io::Result<Vec<String>> {
-        Ok(self
-            .shrimp_stdout()?
-            .into_iter()
-            .group_by(|elt| *elt != '\n' as u8)
-            .into_iter()
-            .filter_map(|(b, v)| b.then(|| v.map(|c| c as char).collect::<String>()))
-            .collect::<Vec<String>>())
+        Ok(String::from_utf8(self.shrimp_stdout()?)
+            .expect("filename must be utf8 encoded")
+            .split("\n")
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect())
     }
     fn shrimp_stdout(&mut self) -> io::Result<Vec<u8>> {
         Ok(self.output()?.stdout)
@@ -45,6 +44,41 @@ impl Shrimple for Command {
     fn shrimp_piped(&mut self) -> io::Result<Child> {
         self.stdin(Stdio::piped()).stdout(Stdio::piped()).spawn()
     }
+}
+
+#[test]
+fn test_utf8_shrimp_vec() {
+    let list = Command::new("ls")
+        .args(["../test/utf8"])
+        .shrimp_vec()
+        .unwrap();
+    let expected = [
+        "Vinland Saga - 01 - ここではないどこか.ass",
+        "Vinland Saga - 02 - 剣.ass",
+        "Vinland Saga - 03 - 戦鬼.ass",
+        "Vinland Saga - 04 - 本当の戦士.ass",
+        "Vinland Saga - 05 - 戦鬼の子.ass",
+        "Vinland Saga - 06 - 旅の始まり.ass",
+        "Vinland Saga - 07 - 北人.ass",
+        "Vinland Saga - 08 - 海の果ての果て.ass",
+        "Vinland Saga - 09 - ロンドン橋の死闘.ass",
+        "Vinland Saga - 10 - ラグナロク.ass",
+        "Vinland Saga - 11 - 賭け.ass",
+        "Vinland Saga - 12 - 対岸の国.ass",
+        "Vinland Saga - 13 - 英雄の子.ass",
+        "Vinland Saga - 14 - 暁光.ass",
+        "Vinland Saga - 15 - 冬至祭のあと.ass",
+        "Vinland Saga - 16 - ケダモノの歴史.ass",
+        "Vinland Saga - 17 - 仕えし者.ass",
+        "Vinland Saga - 18 - ゆりかごの外.ass",
+        "Vinland Saga - 19 - 共闘.ass",
+        "Vinland Saga - 20 - 王冠.ass",
+        "Vinland Saga - 21 - 再会.ass",
+        "Vinland Saga - 22 - 孤狼.ass",
+        "Vinland Saga - 23 - 誤算.ass",
+        "Vinland Saga - 24 - END OF THE PROLOGUE.ass",
+    ];
+    assert_eq!(list, expected);
 }
 
 pub trait Shrimpout {
